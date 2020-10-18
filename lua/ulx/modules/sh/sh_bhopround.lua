@@ -59,9 +59,11 @@ if SERVER then
 
   util.AddNetworkString("BhopRound.AutohopToggle")
 
-  local RanStartHook = false
+  BhopRound = {}
 
-  function StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
+  BhopRound.RanStartHook = false
+
+  function BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
     -- change convars
     RunConsoleCommand("sv_airaccelerate", AirAccel)
     RunConsoleCommand("sv_sticktoground", DisableStickToGround)
@@ -74,7 +76,7 @@ if SERVER then
     end
   end
 
-  function EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
+  function BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
     -- tell clients to stop using autohop
     if !(AutohopDisable) then
       net.Start("BhopRound.AutohopToggle")
@@ -102,32 +104,32 @@ function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
     hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
 
       -- if the seeker leaves, don't run all this code again for when the round restarts with a new seeker
-      if !(RanStartHook) then
-        RanStartHook = true
+      if !(BhopRound.RanStartHook) then
+        BhopRound.RanStartHook = true
         -- store convars so we can reset them after the round ends
         local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
         local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
 
-        StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
+        BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
 
         -- add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
         hook.Add("HASRoundEnded", "BhopRound.RoundEnd", function()
 
-          RanStartHook = false
-          EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
+          BhopRound.RanStartHook = false
+          BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
 
       end) -- HASRoundEnded
-    end -- if !(RanStartHook) then
+    end -- if !(BhopRound.RanStartHook) then
   end) -- HASRoundStarted
 end -- function ulx.BhopRound
 
-local bhop = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopRound, "!bhopround")
-bhop:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
+local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopRound, "!bhopround")
+ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
 
-bhop:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
+ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
 
-bhop:addParam{type=ULib.cmds.BoolArg, hint="disable sv_sticktoground", ULib.cmds.optional}
+ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable sv_sticktoground", ULib.cmds.optional}
 
 
-bhop:defaultAccess(ULib.ACCESS_ADMIN)
-bhop:help("Enables autohop and increases sv_airaccelerate next round")
+ULXBhopRound:defaultAccess(ULib.ACCESS_ADMIN)
+ULXBhopRound:help("Enables autohop and increases sv_airaccelerate next round")
