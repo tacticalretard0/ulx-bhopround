@@ -18,10 +18,6 @@ add jump pack support
 
 -?fix default values not working on airaccel and sticktoground arguments -Done? (might have problems with typing command vs using menu)
 
-don't let spectators autohop
-
-tell clients to enable autohop when they connect mid round
-
 */
 
 
@@ -93,6 +89,7 @@ if SERVER then
 
     -- remove hooks
     hook.Remove("HASRoundStarted", "BhopRound.RoundStart")
+    hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoin")
     hook.Remove("HASRoundEnded", "BhopRound.RoundEnd")
 
   end
@@ -104,28 +101,37 @@ function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
   local DisableStickToGround = DisableStickToGround and 1 or 0 -- convert bool to int
 
     -- hook for next round start
-    hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
+  hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
 
-      -- if the seeker leaves, don't run all this code again for when the round restarts with a new seeker
-      if !(BhopRound.RanStartHook) then
-        BhopRound.RanStartHook = true
-        -- store convars so we can reset them after the round ends
-        local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
-        local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
+    -- if the seeker leaves, don't run all this code again for when the round restarts with a new seeker
+    if !(BhopRound.RanStartHook) then
+      BhopRound.RanStartHook = true
+      -- store convars so we can reset them after the round ends
+      local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
+      local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
 
-        BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
+      -- Start the bhop round
+      BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
 
-        -- add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
-        hook.Add("HASRoundEnded", "BhopRound.RoundEnd", function()
+      -- Add hooks
+      hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoin", function(ply)
+        net.Start("BhopRound.AutohopToggle")
+          net.WriteBool(true)
+        net.Send(ply)
+      end)
 
-          BhopRound.RanStartHook = false
-          BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
+      -- add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
+      hook.Add("HASRoundEnded", "BhopRound.RoundEnd", function()
+
+        BhopRound.RanStartHook = false
+        BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
 
       end) -- HASRoundEnded
     end -- if !(BhopRound.RanStartHook) then
   end) -- HASRoundStarted
 end -- function ulx.BhopRound
 
+-- Create command
 local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopRound, "!bhopround")
 ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
 
