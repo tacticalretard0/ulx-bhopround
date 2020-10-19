@@ -22,8 +22,6 @@ don't let spectators autohop
 
 tell clients to enable autohop when they connect mid round
 
-don't let players in ulx noclip autohop
-
 */
 
 
@@ -34,8 +32,13 @@ if CLIENT then
 
   local function Autohop(cmd)
 
-    if cmd:KeyDown(IN_JUMP) then
-      if !LocalPlayer():IsOnGround() then
+    local ply = LocalPlayer()
+    local mt = ply:GetMoveType()
+    local team = ply:Team()
+
+    if mt != MOVETYPE_NOCLIP && team != TEAM_SPECTATOR then
+
+      if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
         cmd:RemoveKey(IN_JUMP)
 
       end

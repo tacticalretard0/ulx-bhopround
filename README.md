@@ -9,4 +9,3 @@ This command automatically enables auto bhop the round after it is run.
 * Add support for Pointshop jumppack
 * Add better autohop code
 * Let players autohop when they join in the middle of the round
-* Don't let spectators and players in noclip autohop
