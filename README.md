@@ -6,5 +6,4 @@ This command automatically enables auto bhop the round after it is run.
 
 ## TODO
 * Add ULX voting
-* Add support for Pointshop jumppack
 * Add better autohop code

@@ -14,8 +14,6 @@ remove old commented code
 
 improve autohop code
 
-add jump pack support
-
 -?fix default values not working on airaccel and sticktoground arguments -Done? (might have problems with typing command vs using menu)
 
 */
@@ -61,6 +59,28 @@ if SERVER then
   BhopRound = {}
 
   BhopRound.RanStartHook = false
+  BhopRound.ServerHasPointshop = false
+
+  -- Is pointshop on the server?
+  if istable(PS) then
+    -- Yes
+    BhopRound.ServerHasPointshop = true
+
+    -- The name of the category with jumppacks, change if it has a different name
+    BhopRound.JUMPPACK_CATEGORY_NAME = "Jump Packs"
+
+  end
+
+  function BhopRound.FakeJumppack(ply, data)
+
+    if ply:PS_NumItemsEquippedFromCategory(BhopRound.JUMPPACK_CATEGORY_NAME) > 0 then
+      -- They aren't on the ground, so the fake jump pack should activate
+      if !(ply:IsOnGround()) then
+  	     data:SetVelocity( data:GetVelocity() + Vector(0,0,100)*FrameTime() )
+
+      end
+    end
+  end
 
   function BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
     -- change convars
@@ -90,6 +110,7 @@ if SERVER then
     -- remove hooks
     hook.Remove("HASRoundStarted", "BhopRound.RoundStart")
     hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoin")
+    hook.Remove("Move", "BhopRound.FakeJumppack")
     hook.Remove("HASRoundEnded", "BhopRound.RoundEnd")
 
   end
@@ -114,11 +135,17 @@ function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
       BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
 
       -- Add hooks
+      -- Let players autohop if they join mid round
       hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoin", function(ply)
         net.Start("BhopRound.AutohopToggle")
           net.WriteBool(true)
         net.Send(ply)
       end)
+
+      -- Pointshop jump pack
+      if BhopRound.ServerHasPointshop then
+        hook.Add("Move", "BhopRound.FakeJumppack", BhopRound.FakeJumppack)
+      end
 
       -- add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
       hook.Add("HASRoundEnded", "BhopRound.RoundEnd", function()
