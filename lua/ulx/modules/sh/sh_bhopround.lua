@@ -118,8 +118,8 @@ end
 
 function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
 
-  local DisableStickToGround = !(DisableStickToGround) -- flip bool
-  local DisableStickToGround = DisableStickToGround and 1 or 0 -- convert bool to int
+  DisableStickToGround = !(DisableStickToGround) -- flip bool
+  DisableStickToGround = DisableStickToGround and 1 or 0 -- convert bool to int
 
     -- hook for next round start
   hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
