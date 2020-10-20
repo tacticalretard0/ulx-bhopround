@@ -118,8 +118,8 @@ end
 
 function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
 
-  DisableStickToGround = !(DisableStickToGround) -- flip bool
-  DisableStickToGround = DisableStickToGround and 1 or 0 -- convert bool to int
+  -- Convert bool to int
+  DisableStickToGround = DisableStickToGround and 1 or 0
 
     -- hook for next round start
   hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
@@ -164,7 +164,7 @@ ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, def
 
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
 
-ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable sv_sticktoground", ULib.cmds.optional}
+ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="enable sv_sticktoground", ULib.cmds.optional}
 
 
 ULXBhopRound:defaultAccess(ULib.ACCESS_ADMIN)
