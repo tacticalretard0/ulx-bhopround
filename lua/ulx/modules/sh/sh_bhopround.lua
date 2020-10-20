@@ -30,7 +30,7 @@ if CLIENT then
     local mt = ply:GetMoveType()
     local team = ply:Team()
 
-    if mt != MOVETYPE_NOCLIP && team != TEAM_SPECTATOR then
+    if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR then
 
       if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
         cmd:RemoveKey(IN_JUMP)
