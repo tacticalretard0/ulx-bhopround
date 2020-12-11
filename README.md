@@ -9,3 +9,4 @@ This command automatically enables auto bhop the round after it is run.
 * Add better autohop code
 * Make jumppack hook shared
 * Somehow find a way to not have to call PS_NumItemsEquippedFromCategory every time the move hook is run (I think it's slow)
+* Just rewrite the entire thing because it's bad
