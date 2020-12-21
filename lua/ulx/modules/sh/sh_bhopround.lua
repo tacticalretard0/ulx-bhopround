@@ -1,10 +1,5 @@
 local CATEGORY_NAME = "Voting"
 
-if SERVER then
-  util.AddNetworkString("BhopRound.AutohopToggle")
-end
-
-
 if CLIENT then
 
   local function Autohop(cmd)
@@ -36,72 +31,93 @@ if CLIENT then
   end)
 end
 
-local VotedThisRound = false
+if SERVER then
+  util.AddNetworkString("BhopRound.AutohopToggle")
+end
 
 function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
 
-  print("command run")
-  if VotedThisRound then
+  -- 10 minute cooldown
 
-    print("replace me with something to do if we already created a vote this round")
+  if !(StartedVoteTime) then StartedVoteTime = -600 end
+
+  if (CurTime() - StartedVoteTime) < 600 then
+
+    ULib.tsayError(calling_ply, "Please wait " .. tostring(math.floor(600 - (CurTime() - StartedVoteTime))) .. " seconds before starting another bhop round vote")
 
   else
 
-    VotedThisRound = true
+    StartedVoteTime = CurTime()
 
-    hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+    ulx.doVote("Bhop round? (next round)", {"Yes", "No"}, function(results)
 
-      -- new round, can vote again (maybe remove this later so command only works once per map, or add time cooldown?)
-      VotedThisRound = false
+      local winner  = 2
+      local highest = 0
 
-      -- Store convars so we can reset them
-      local PreviousAirAccel      = GetConVar("sv_airaccelerate"):GetInt()
-      local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
+      for option, votecount in pairs(results.results) do
+        if votecount > highest then
+          highest = votecount
+          winner = option
+        end
+      end
 
-      -- Change convars
-      RunConsoleCommand("sv_airaccelerate", AirAccel)
-      RunConsoleCommand("sv_sticktoground", StickToGround && 1 || 0)
+      if winner == 2 then
+        ULib.tsay(nil, "Vote results: Round will not be a bhop round.")
+      else
 
-      --print("round start")
-      if !(AutohopDisable) then
-        --print("autohop is enabled")
-        -- Tell players to use autohop
-        net.Start("BhopRound.AutohopToggle")
-          net.WriteBool(true)
-        net.Broadcast()
+        ULib.tsay(nil, "Vote Passed! Next round will be a bhop round")
 
-        -- For when a player joins mid round
-        hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
+        hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
 
-          net.Start("BhopRound.AutohopToggle")
-            net.WriteBool(true)
-          net.Send(ply)
+          -- Store convars so we can reset them
+          local PreviousAirAccel      = GetConVar("sv_airaccelerate"):GetInt()
+          local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
 
-        end) -- hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
-      end -- if !(AutohopDisable) then
+          -- Change convars
+          RunConsoleCommand("sv_airaccelerate", AirAccel)
+          RunConsoleCommand("sv_sticktoground", StickToGround && 1 || 0)
 
+          --print("round start")
+          if !(AutohopDisable) then
+            --print("autohop is enabled")
+            -- Tell players to use autohop
+            net.Start("BhopRound.AutohopToggle")
+              net.WriteBool(true)
+            net.Broadcast()
 
-      -- Add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
-      hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
-        --print("round end")
+            -- For when a player joins mid round
+            hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
 
-        -- Tell players to stop using autohop
-        net.Start("BhopRound.AutohopToggle")
-          net.WriteBool(false)
-        net.Broadcast()
+              net.Start("BhopRound.AutohopToggle")
+                net.WriteBool(true)
+              net.Send(ply)
 
-        -- Reset convars
-        RunConsoleCommand("sv_airaccelerate", PreviousAirAccel)
-        RunConsoleCommand("sv_sticktoground", PreviousStickToGround)
+            end) -- hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
+          end -- if !(AutohopDisable) then
 
-        -- remove hooks
-        hook.Remove("HASRoundStarted", "BhopRound.RoundStarted")   -- Round start
-        hook.Remove("HASRoundEnded", "BhopRound.RoundEnded")       -- Round end
+          -- Add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
+          hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
+            --print("round end")
 
-        hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoined") -- Player join
+            -- Tell players to stop using autohop
+            net.Start("BhopRound.AutohopToggle")
+              net.WriteBool(false)
+            net.Broadcast()
 
-      end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
-    end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+            -- Reset convars
+            RunConsoleCommand("sv_airaccelerate", PreviousAirAccel)
+            RunConsoleCommand("sv_sticktoground", PreviousStickToGround)
+
+            -- remove hooks
+            hook.Remove("HASRoundStarted", "BhopRound.RoundStarted")   -- Round start
+            hook.Remove("HASRoundEnded", "BhopRound.RoundEnded")       -- Round end
+
+            hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoined") -- Player join
+
+          end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
+        end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+      end -- if winner == 2 then ... else
+    end) -- ulx.doVote("Bhop round? (next round)", {"Yes", "No"}, function(results)
   end -- if VotedThisRound then ... else
 end -- function ulx.BhopVote(calling_ply, AutohopDisable)
 
