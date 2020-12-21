@@ -117,9 +117,9 @@ function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
           end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
         end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
       end -- if winner == 2 then ... else
-    end) -- ulx.doVote("Bhop round? (next round)", {"Yes", "No"}, function(results)
-  end -- if VotedThisRound then ... else
-end -- function ulx.BhopVote(calling_ply, AutohopDisable)
+    end) -- ulx.doVote(function()
+  end -- if (CurTime() - StartedVoteTime) < 600 then ... else
+end -- function ulx.BhopVote()
 
 
 local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopVote, "!bhopround")
