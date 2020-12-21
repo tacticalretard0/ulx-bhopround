@@ -38,7 +38,7 @@ end
 
 local VotedThisRound = false
 
-function ulx.BhopVote(calling_ply, AutohopDisable, AirAccel)
+function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
 
   print("command run")
   if VotedThisRound then
@@ -55,10 +55,12 @@ function ulx.BhopVote(calling_ply, AutohopDisable, AirAccel)
       VotedThisRound = false
 
       -- Store convars so we can reset them
-      local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
+      local PreviousAirAccel      = GetConVar("sv_airaccelerate"):GetInt()
+      local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
 
       -- Change convars
       RunConsoleCommand("sv_airaccelerate", AirAccel)
+      RunConsoleCommand("sv_sticktoground", StickToGround && 1 || 0)
 
       --print("round start")
       if !(AutohopDisable) then
@@ -90,6 +92,7 @@ function ulx.BhopVote(calling_ply, AutohopDisable, AirAccel)
 
         -- Reset convars
         RunConsoleCommand("sv_airaccelerate", PreviousAirAccel)
+        RunConsoleCommand("sv_sticktoground", PreviousStickToGround)
 
         -- remove hooks
         hook.Remove("HASRoundStarted", "BhopRound.RoundStarted")   -- Round start
@@ -105,6 +108,8 @@ end -- function ulx.BhopVote(calling_ply, AutohopDisable)
 
 local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopVote, "!bhopround")
 
+ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
+
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
 
-ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
+ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="enable sv_sticktoground", ULib.cmds.optional}
