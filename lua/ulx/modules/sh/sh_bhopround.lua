@@ -38,7 +38,7 @@ end
 
 local VotedThisRound = false
 
-function ulx.BhopVote(calling_ply, AutohopDisable)
+function ulx.BhopVote(calling_ply, AutohopDisable, AirAccel)
 
   print("command run")
   if VotedThisRound then
@@ -50,6 +50,16 @@ function ulx.BhopVote(calling_ply, AutohopDisable)
     VotedThisRound = true
 
     hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+
+      -- new round, can vote again (maybe remove this later so command only works once per map, or add time cooldown?)
+      VotedThisRound = false
+
+      -- Store convars so we can reset them
+      local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
+
+      -- Change convars
+      RunConsoleCommand("sv_airaccelerate", AirAccel)
+
       --print("round start")
       if !(AutohopDisable) then
         --print("autohop is enabled")
@@ -78,15 +88,14 @@ function ulx.BhopVote(calling_ply, AutohopDisable)
           net.WriteBool(false)
         net.Broadcast()
 
-        -- remove hooks
+        -- Reset convars
+        RunConsoleCommand("sv_airaccelerate", PreviousAirAccel)
 
+        -- remove hooks
         hook.Remove("HASRoundStarted", "BhopRound.RoundStarted")   -- Round start
         hook.Remove("HASRoundEnded", "BhopRound.RoundEnded")       -- Round end
 
         hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoined") -- Player join
-
-        -- new round, can vote again (maybe remove this later so command only works once per map, or add time cooldown?)
-        VotedThisRound = false
 
       end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
     end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
@@ -97,3 +106,5 @@ end -- function ulx.BhopVote(calling_ply, AutohopDisable)
 local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopVote, "!bhopround")
 
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
+
+ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
