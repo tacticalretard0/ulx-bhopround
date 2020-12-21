@@ -1,33 +1,16 @@
-/*
-
-TODO:
-
-add voting | ulx.doVote( string title, table options, function callback,   |   timeout, filter, noecho, ... )
-                                                                                                true
-
-
--add sv_sticktoground option -Done
-
--add autohop option (make autohop optional) -Done
-
-remove old commented code
-
-improve autohop code
-
--?fix default values not working on airaccel and sticktoground arguments -Done? (might have problems with typing command vs using menu)
-
-*/
-
-
-
 local CATEGORY_NAME = "Voting"
+
+if SERVER then
+  util.AddNetworkString("BhopRound.AutohopToggle")
+end
+
 
 if CLIENT then
 
   local function Autohop(cmd)
 
-    local ply = LocalPlayer()
-    local mt = ply:GetMoveType()
+    local ply  = LocalPlayer()
+    local mt   = ply:GetMoveType()
     local team = ply:Team()
 
     if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR then
@@ -35,137 +18,82 @@ if CLIENT then
       if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
         cmd:RemoveKey(IN_JUMP)
 
-      end
-    end
-  end
+      end -- if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
+    end -- if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR then
+  end -- function Autohop(cmd)
 
+  -- We got told to enable or disable autohop
+  net.Receive("BhopRound.AutohopToggle", function(_, ply)
 
-  net.Receive("BhopRound.AutohopToggle", function()
+    -- Enable or disable it?
+    BhopToggle = net.ReadBool()
 
-    local toggle = net.ReadBool()
-
-    if toggle then
-      hook.Add("CreateMove", "BhopRound.AutohopHook", Autohop)
+    if BhopToggle then
+      hook.Add("CreateMove", "BhopRound.Autohop", Autohop)
     else
-      hook.Remove("CreateMove", "BhopRound.AutohopHook")
+      hook.Remove("CreateMove", "BhopRound.Autohop")
     end
   end)
 end
 
-if SERVER then
+local VotedThisRound = false
 
-  util.AddNetworkString("BhopRound.AutohopToggle")
+function ulx.BhopVote(calling_ply, AutohopDisable)
 
-  BhopRound = {}
+  print("command run")
+  if VotedThisRound then
 
-  BhopRound.RanStartHook = false
-  BhopRound.ServerHasPointshop = false
+    print("replace me with something to do if we already created a vote this round")
 
-  -- Is pointshop on the server?
-  if istable(PS) then
-    -- Yes
-    BhopRound.ServerHasPointshop = true
+  else
 
-    -- The name of the category with jumppacks, change if it has a different name
-    BhopRound.JUMPPACK_CATEGORY_NAME = "Jump Packs"
+    VotedThisRound = true
 
-  end
-
-  function BhopRound.FakeJumppack(ply, data)
-
-    if ply:PS_NumItemsEquippedFromCategory(BhopRound.JUMPPACK_CATEGORY_NAME) > 0 then
-      -- They aren't on the ground, so the fake jump pack should activate
-      if !(ply:IsOnGround()) then
-  	     data:SetVelocity( data:GetVelocity() + Vector(0,0,100)*FrameTime() )
-
-      end
-    end
-  end
-
-  function BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
-    -- change convars
-    RunConsoleCommand("sv_airaccelerate", AirAccel)
-    RunConsoleCommand("sv_sticktoground", DisableStickToGround)
-
-    -- tell clients to start using autohop
-    if !(AutohopDisable) then
-      net.Start("BhopRound.AutohopToggle")
-        net.WriteBool(true)
-      net.Broadcast()
-    end
-  end
-
-  function BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
-    -- tell clients to stop using autohop
-    if !(AutohopDisable) then
-      net.Start("BhopRound.AutohopToggle")
-        net.WriteBool(false)
-      net.Broadcast()
-    end
-
-    -- reset convars
-    RunConsoleCommand("sv_airaccelerate", PreviousAirAccel)
-    RunConsoleCommand("sv_sticktoground", PreviousStickToGround)
-
-    -- remove hooks
-    hook.Remove("HASRoundStarted", "BhopRound.RoundStart")
-    hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoin")
-    hook.Remove("Move", "BhopRound.FakeJumppack")
-    hook.Remove("HASRoundEnded", "BhopRound.RoundEnd")
-
-  end
-end
-
-function ulx.BhopRound(ply, AirAccel, AutohopDisable, DisableStickToGround)
-
-  -- Convert bool to int
-  DisableStickToGround = DisableStickToGround and 1 or 0
-
-    -- hook for next round start
-  hook.Add("HASRoundStarted", "BhopRound.RoundStart", function()
-
-    -- if the seeker leaves, don't run all this code again for when the round restarts with a new seeker
-    if !(BhopRound.RanStartHook) then
-      BhopRound.RanStartHook = true
-      -- store convars so we can reset them after the round ends
-      local PreviousAirAccel = GetConVar("sv_airaccelerate"):GetInt()
-      local PreviousStickToGround = GetConVar("sv_sticktoground"):GetInt()
-
-      -- Start the bhop round
-      BhopRound.StartBhopRound(AirAccel, AutohopDisable, DisableStickToGround)
-
-      -- Add hooks
-      -- Let players autohop if they join mid round
-      hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoin", function(ply)
+    hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+      --print("round start")
+      if !(AutohopDisable) then
+        --print("autohop is enabled")
+        -- Tell players to use autohop
         net.Start("BhopRound.AutohopToggle")
           net.WriteBool(true)
-        net.Send(ply)
-      end)
+        net.Broadcast()
 
-      -- Pointshop jump pack
-      if BhopRound.ServerHasPointshop then
-        hook.Add("Move", "BhopRound.FakeJumppack", BhopRound.FakeJumppack)
-      end
+        -- For when a player joins mid round
+        hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
 
-      -- add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
-      hook.Add("HASRoundEnded", "BhopRound.RoundEnd", function()
+          net.Start("BhopRound.AutohopToggle")
+            net.WriteBool(true)
+          net.Send(ply)
 
-        BhopRound.RanStartHook = false
-        BhopRound.EndBhopRound(PreviousAirAccel, AutohopDisable, PreviousStickToGround)
+        end) -- hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
+      end -- if !(AutohopDisable) then
 
-      end) -- HASRoundEnded
-    end -- if !(BhopRound.RanStartHook) then
-  end) -- HASRoundStarted
-end -- function ulx.BhopRound
 
--- Create command
-local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopRound, "!bhopround")
-ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, default=2000, ULib.cmds.optional, ULib.cmds.round}
+      -- Add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
+      hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
+        --print("round end")
+
+        -- Tell players to stop using autohop
+        net.Start("BhopRound.AutohopToggle")
+          net.WriteBool(false)
+        net.Broadcast()
+
+        -- remove hooks
+
+        hook.Remove("HASRoundStarted", "BhopRound.RoundStarted")   -- Round start
+        hook.Remove("HASRoundEnded", "BhopRound.RoundEnded")       -- Round end
+
+        hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoined") -- Player join
+
+        -- new round, can vote again (maybe remove this later so command only works once per map, or add time cooldown?)
+        VotedThisRound = false
+
+      end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
+    end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
+  end -- if VotedThisRound then ... else
+end -- function ulx.BhopVote(calling_ply, AutohopDisable)
+
+
+local ULXBhopRound = ulx.command(CATEGORY_NAME, "ulx bhopround", ulx.BhopVote, "!bhopround")
 
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
-
-ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="enable sv_sticktoground", ULib.cmds.optional}
-
-
-ULXBhopRound:defaultAccess(ULib.ACCESS_ADMIN)
-ULXBhopRound:help("Enables autohop and increases sv_airaccelerate next round")
