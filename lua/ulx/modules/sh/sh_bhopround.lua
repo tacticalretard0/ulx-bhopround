@@ -176,3 +176,7 @@ ULXBhopRound:addParam{type=ULib.cmds.NumArg, hint="sv_airaccelerate", min=0, def
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="disable autohop", ULib.cmds.optional}
 
 ULXBhopRound:addParam{type=ULib.cmds.BoolArg, hint="enable sv_sticktoground", ULib.cmds.optional}
+
+ULXBhopRound:defaultAccess(ULib.ACCESS_ADMIN)
+
+ULXBhopRound:help("Enables autohop and increases sv_airaccelerate next round")
