@@ -1,3 +1,6 @@
+-- github https://github.com/tacticalretard0/ulx-bhopround
+-- workshop https://steamcommunity.com/sharedfiles/filedetails/?id=2329551914
+
 -- The category the command shows up in
 local CATEGORY_NAME          = "Voting"
 
@@ -34,9 +37,9 @@ if CLIENT then
     local team       = ply:Team()
     local waterlevel = ply:WaterLevel()
 
-    if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR && waterlevel == 0 then
+    if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR then
 
-      if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
+      if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) && waterlevel <= 1 then
         cmd:RemoveKey(IN_JUMP)
 
       end -- if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
