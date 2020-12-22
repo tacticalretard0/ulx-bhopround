@@ -1,14 +1,40 @@
-local CATEGORY_NAME = "Voting"
+-- The category the command shows up in
+local CATEGORY_NAME          = "Voting"
+
+-- Which category are the jumppacks in?
+local JUMPPACK_CATEGORY_NAME = "Jump Packs"
+
+local SERVER_HAS_POINTSHOP   = istable(PS)
 
 if CLIENT then
 
+  -- Pointshop documentation says that this method is shared but it isn't, so i add it to client
+  -- begin pointshop retardation
+  local PLAYER = FindMetaTable("Player")
+
+  function PLAYER:PS_NumItemsEquippedFromCategory(cat_name)
+  	local count = 0
+
+  	for item_id, item in pairs(self.PS_Items) do
+  		local ITEM = PS.Items[item_id]
+  		if ITEM.Category == cat_name and item.Equipped then
+  			count = count + 1
+  		end
+  	end
+
+  	return count
+  end
+  -- end pointshop retardation
+
   local function Autohop(cmd)
 
-    local ply  = LocalPlayer()
-    local mt   = ply:GetMoveType()
-    local team = ply:Team()
+    local ply        = LocalPlayer()
 
-    if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR then
+    local mt         = ply:GetMoveType()
+    local team       = ply:Team()
+    local waterlevel = ply:WaterLevel()
+
+    if mt == MOVETYPE_WALK && team != TEAM_SPECTATOR && waterlevel == 0 then
 
       if cmd:KeyDown(IN_JUMP) && !(ply:IsOnGround()) then
         cmd:RemoveKey(IN_JUMP)
@@ -25,10 +51,30 @@ if CLIENT then
 
     if BhopToggle then
       hook.Add("CreateMove", "BhopRound.Autohop", Autohop)
+
+      -- Add clientside jumppack
+      if SERVER_HAS_POINTSHOP then
+        hook.Add("Move", "BhopRound.JumpPack", FakeJumppack)
+      end
+
     else
       hook.Remove("CreateMove", "BhopRound.Autohop")
+      -- Disable clientside jumppack
+      hook.Remove("Move", "BhopRound.JumpPack")
     end
   end)
+end
+
+-- Shared jumppack support used with Move hook
+local function FakeJumppack(ply, data)
+
+  if ply:PS_NumItemsEquippedFromCategory(JUMPPACK_CATEGORY_NAME) > 0 then
+    -- They aren't on the ground, so the fake jump pack should activate
+    if !(ply:IsOnGround()) then
+       data:SetVelocity( data:GetVelocity() + Vector(0,0,100)*FrameTime() )
+
+    end
+  end
 end
 
 if SERVER then
@@ -38,16 +84,15 @@ end
 function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
 
   -- 10 minute cooldown
+  if !(StartedBhopVoteTime) then StartedBhopVoteTime = -600 end
 
-  if !(StartedVoteTime) then StartedVoteTime = -600 end
+  if (CurTime() - StartedBhopVoteTime) < 600 then
 
-  if (CurTime() - StartedVoteTime) < 600 then
-
-    ULib.tsayError(calling_ply, "Please wait " .. tostring(math.floor(600 - (CurTime() - StartedVoteTime))) .. " seconds before starting another bhop round vote")
+    ULib.tsayError(calling_ply, "Please wait " .. tostring(math.floor(600 - (CurTime() - StartedBhopVoteTime))) .. " seconds before starting another bhop round vote")
 
   else
 
-    StartedVoteTime = CurTime()
+    StartedBhopVoteTime = CurTime()
 
     ulx.doVote("Bhop round? (next round)", {"Yes", "No"}, function(results)
 
@@ -77,9 +122,7 @@ function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
           RunConsoleCommand("sv_airaccelerate", AirAccel)
           RunConsoleCommand("sv_sticktoground", StickToGround && 1 || 0)
 
-          --print("round start")
           if !(AutohopDisable) then
-            --print("autohop is enabled")
             -- Tell players to use autohop
             net.Start("BhopRound.AutohopToggle")
               net.WriteBool(true)
@@ -87,17 +130,19 @@ function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
 
             -- For when a player joins mid round
             hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
-
               net.Start("BhopRound.AutohopToggle")
                 net.WriteBool(true)
               net.Send(ply)
-
             end) -- hook.Add("HASPlayerNetReady", "BhopRound.PlayerJoined", function(ply)
+
+            -- Enable jumppack serverside
+            if SERVER_HAS_POINTSHOP then
+              hook.Add("Move", "BhopRound.JumpPack", FakeJumppack)
+            end
           end -- if !(AutohopDisable) then
 
           -- Add hook to end bhop round inside of the start hook so that it resets everything at the end of the next round, not this one
           hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
-            --print("round end")
 
             -- Tell players to stop using autohop
             net.Start("BhopRound.AutohopToggle")
@@ -114,11 +159,13 @@ function ulx.BhopVote(calling_ply, AirAccel, AutohopDisable, StickToGround)
 
             hook.Remove("HASPlayerNetReady", "BhopRound.PlayerJoined") -- Player join
 
+            hook.Remove("Move", "BhopRound.JumpPack")       -- Serverside jumppack
+
           end) -- hook.Add("HASRoundEnded", "BhopRound.RoundEnded", function()
         end) -- hook.Add("HASRoundStarted", "BhopRound.RoundStarted", function()
       end -- if winner == 2 then ... else
     end) -- ulx.doVote(function()
-  end -- if (CurTime() - StartedVoteTime) < 600 then ... else
+  end -- if (CurTime() - StartedBhopVoteTime) < 600 then ... else
 end -- function ulx.BhopVote()
 
 
